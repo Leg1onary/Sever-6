@@ -6,6 +6,8 @@ namespace Sever6.Prototype01
     public sealed class GameFlowController : MonoBehaviour
     {
         private const int MinutesPerTransit = 15;
+        private const int MaxPower = 5;
+        private const int StartingPower = 4;
 
         [Header("Screen Roots")]
         [SerializeField] private GameObject startScreen;
@@ -18,6 +20,10 @@ namespace Sever6.Prototype01
         [SerializeField] private TMP_Text controlRoomClockText;
         [SerializeField] private TMP_Text stationMapLocationText;
         [SerializeField] private TMP_Text transitDetailText;
+        [SerializeField] private TMP_Text powerText;
+        [SerializeField] private TMP_Text commsText;
+        [SerializeField] private TMP_Text camerasText;
+        [SerializeField] private TMP_Text systemMessageText;
 
         private enum Location
         {
@@ -25,9 +31,26 @@ namespace Sever6.Prototype01
             GeneratorRoom
         }
 
+        private enum CommsStatus
+        {
+            Online,
+            Degrading
+        }
+
+        private enum CameraStatus
+        {
+            Online
+        }
+
         private Location currentLocation = Location.ControlRoom;
         private Location transitDestination = Location.ControlRoom;
+        private CommsStatus commsStatus = CommsStatus.Online;
+        private CameraStatus cameraStatus = CameraStatus.Online;
+
         private int elapsedMinutes;
+        private int availablePower;
+        private int completedTransitCount;
+        private string systemMessage;
 
         private void Awake()
         {
@@ -64,8 +87,12 @@ namespace Sever6.Prototype01
 
         public void ContinueTransit()
         {
+            completedTransitCount++;
             elapsedMinutes += MinutesPerTransit;
+            availablePower = Mathf.Max(0, availablePower - 1);
             currentLocation = transitDestination;
+
+            ApplyTransitConsequences();
             RefreshUi();
             ShowCurrentLocation();
         }
@@ -74,7 +101,14 @@ namespace Sever6.Prototype01
         {
             currentLocation = Location.ControlRoom;
             transitDestination = Location.ControlRoom;
+            commsStatus = CommsStatus.Online;
+            cameraStatus = CameraStatus.Online;
+
             elapsedMinutes = 0;
+            availablePower = StartingPower;
+            completedTransitCount = 0;
+            systemMessage = "SYSTEM READY. AWAITING OPERATOR INPUT.";
+
             RefreshUi();
         }
 
@@ -89,6 +123,23 @@ namespace Sever6.Prototype01
             transitDestination = destination;
             RefreshUi();
             ShowOnly(transitScreen);
+        }
+
+        private void ApplyTransitConsequences()
+        {
+            if (completedTransitCount == 1 &&
+                currentLocation == Location.GeneratorRoom)
+            {
+                commsStatus = CommsStatus.Degrading;
+                systemMessage = "COMMS WARNING: SIGNAL DEGRADING.";
+                return;
+            }
+
+            if (currentLocation == Location.ControlRoom &&
+                commsStatus == CommsStatus.Degrading)
+            {
+                systemMessage = "COMMS REQUIRES MANUAL SERVICE IN GENERATOR ROOM.";
+            }
         }
 
         private void ShowCurrentLocation()
@@ -142,6 +193,26 @@ namespace Sever6.Prototype01
                 transitDetailText.text =
                     $"REMOTE SYSTEMS UNAVAILABLE.\nTIME ADVANCED: +{MinutesPerTransit:00} MIN";
             }
+
+            if (powerText != null)
+            {
+                powerText.text = $"POWER: {availablePower} / {MaxPower}";
+            }
+
+            if (commsText != null)
+            {
+                commsText.text = $"COMMS: {FormatCommsStatus(commsStatus)}";
+            }
+
+            if (camerasText != null)
+            {
+                camerasText.text = $"CAMERAS: {FormatCameraStatus(cameraStatus)}";
+            }
+
+            if (systemMessageText != null)
+            {
+                systemMessageText.text = systemMessage;
+            }
         }
 
         private static string FormatTime(int totalMinutes)
@@ -157,6 +228,25 @@ namespace Sever6.Prototype01
             {
                 Location.ControlRoom => "CONTROL ROOM",
                 Location.GeneratorRoom => "GENERATOR ROOM",
+                _ => "UNKNOWN"
+            };
+        }
+
+        private static string FormatCommsStatus(CommsStatus status)
+        {
+            return status switch
+            {
+                CommsStatus.Online => "ONLINE",
+                CommsStatus.Degrading => "DEGRADING",
+                _ => "UNKNOWN"
+            };
+        }
+
+        private static string FormatCameraStatus(CameraStatus status)
+        {
+            return status switch
+            {
+                CameraStatus.Online => "ONLINE",
                 _ => "UNKNOWN"
             };
         }

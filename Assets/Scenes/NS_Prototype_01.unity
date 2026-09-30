@@ -1323,6 +1323,13 @@ MonoBehaviour:
   stationMapScreen: {fileID: 1318955329}
   transitScreen: {fileID: 2049589106}
   generatorRoomScreen: {fileID: 1149228356}
+  controlRoomClockText: {fileID: 2125511349}
+  stationMapLocationText: {fileID: 1000679649}
+  transitDetailText: {fileID: 1117693580}
+  powerText: {fileID: 1594347409}
+  commsText: {fileID: 462890849}
+  camerasText: {fileID: 1925281195}
+  systemMessageText: {fileID: 115885967}
 --- !u!4 &738709646
 Transform:
   m_ObjectHideFlags: 0
