@@ -15,6 +15,7 @@ namespace Sever6.Prototype01
         [SerializeField] private GameObject stationMapScreen;
         [SerializeField] private GameObject transitScreen;
         [SerializeField] private GameObject generatorRoomScreen;
+        [SerializeField] private GameObject comicPanelScreen;
 
         [Header("Runtime UI")]
         [SerializeField] private TMP_Text controlRoomClockText;
@@ -24,6 +25,9 @@ namespace Sever6.Prototype01
         [SerializeField] private TMP_Text commsText;
         [SerializeField] private TMP_Text camerasText;
         [SerializeField] private TMP_Text systemMessageText;
+        [SerializeField] private TMP_Text comicPanelTitleText;
+        [SerializeField] private TMP_Text comicPanelDescriptionText;
+        [SerializeField] private TMP_Text comicPanelActionText;
 
         private enum Location
         {
@@ -39,7 +43,8 @@ namespace Sever6.Prototype01
 
         private enum CameraStatus
         {
-            Online
+            Online,
+            Unreliable
         }
 
         private Location currentLocation = Location.ControlRoom;
@@ -50,6 +55,7 @@ namespace Sever6.Prototype01
         private int elapsedMinutes;
         private int availablePower;
         private int completedTransitCount;
+        private bool manualBypassApplied;
         private string systemMessage;
 
         private void Awake()
@@ -97,6 +103,41 @@ namespace Sever6.Prototype01
             ShowCurrentLocation();
         }
 
+        public void OpenDistributionPanel()
+        {
+            if (currentLocation != Location.GeneratorRoom)
+            {
+                return;
+            }
+
+            RefreshComicPanel();
+            ShowOnly(comicPanelScreen);
+        }
+
+        public void ApplyManualBypass()
+        {
+            if (currentLocation != Location.GeneratorRoom ||
+                commsStatus != CommsStatus.Degrading ||
+                manualBypassApplied)
+            {
+                return;
+            }
+
+            manualBypassApplied = true;
+            commsStatus = CommsStatus.Online;
+            cameraStatus = CameraStatus.Unreliable;
+            systemMessage =
+                "MANUAL BYPASS ACTIVE. CAMERA INTEGRITY UNVERIFIED.";
+
+            RefreshUi();
+            ShowGeneratorRoom();
+        }
+
+        public void CloseComicPanel()
+        {
+            ShowGeneratorRoom();
+        }
+
         private void ResetShift()
         {
             currentLocation = Location.ControlRoom;
@@ -107,6 +148,7 @@ namespace Sever6.Prototype01
             elapsedMinutes = 0;
             availablePower = StartingPower;
             completedTransitCount = 0;
+            manualBypassApplied = false;
             systemMessage = "SYSTEM READY. AWAITING OPERATOR INPUT.";
 
             RefreshUi();
@@ -138,7 +180,8 @@ namespace Sever6.Prototype01
             if (currentLocation == Location.ControlRoom &&
                 commsStatus == CommsStatus.Degrading)
             {
-                systemMessage = "COMMS REQUIRES MANUAL SERVICE IN GENERATOR ROOM.";
+                systemMessage =
+                    "COMMS REQUIRES MANUAL SERVICE IN GENERATOR ROOM.";
             }
         }
 
@@ -215,6 +258,28 @@ namespace Sever6.Prototype01
             }
         }
 
+        private void RefreshComicPanel()
+        {
+            if (comicPanelTitleText != null)
+            {
+                comicPanelTitleText.text = "DISTRIBUTION PANEL";
+            }
+
+            if (comicPanelDescriptionText != null)
+            {
+                comicPanelDescriptionText.text = manualBypassApplied
+                    ? "MANUAL BYPASS IS ACTIVE.\nCOMMS CHANNEL RESTORED.\nCAMERA INTEGRITY: UNVERIFIED."
+                    : "COMMS RELAY IS DEGRADING.\nMANUAL BYPASS WILL RESTORE THE CHANNEL.\nCAMERA INTEGRITY CANNOT BE VERIFIED.";
+            }
+
+            if (comicPanelActionText != null)
+            {
+                comicPanelActionText.text = manualBypassApplied
+                    ? "BYPASS ALREADY ACTIVE"
+                    : "APPLY MANUAL BYPASS";
+            }
+        }
+
         private static string FormatTime(int totalMinutes)
         {
             int hours = totalMinutes / 60;
@@ -247,6 +312,7 @@ namespace Sever6.Prototype01
             return status switch
             {
                 CameraStatus.Online => "ONLINE",
+                CameraStatus.Unreliable => "UNRELIABLE",
                 _ => "UNKNOWN"
             };
         }
@@ -258,6 +324,7 @@ namespace Sever6.Prototype01
             stationMapScreen.SetActive(activeScreen == stationMapScreen);
             transitScreen.SetActive(activeScreen == transitScreen);
             generatorRoomScreen.SetActive(activeScreen == generatorRoomScreen);
+            comicPanelScreen.SetActive(activeScreen == comicPanelScreen);
         }
     }
 }
